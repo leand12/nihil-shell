@@ -23,6 +23,8 @@ ShellRoot {
     property bool wrong: false
     property int attempts: 0
     property bool going: false
+    property int session: 0
+    readonly property var chosen: Config.sessions[session] ?? { name: "", command: [] }
 
     readonly property string skipFile: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/nihil-greeter-password"
 
@@ -58,6 +60,12 @@ ShellRoot {
         field.clear();
         Greetd.cancelSession();
         start();
+    }
+
+    function nextSession(): void {
+        if (Config.sessions.length < 2 || going)
+            return;
+        session = (session + 1) % Config.sessions.length;
     }
 
     function reader(message: string): bool {
@@ -317,6 +325,26 @@ ShellRoot {
                 }
             }
 
+            Label {
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: parent.height / 2 + 164 - height / 2
+                visible: Config.sessions.length > 1
+                text: root.chosen.name
+                color: sessionArea.containsMouse ? Tokens.ink : Tokens.off
+                font.pixelSize: 12
+
+                Behavior on color { ColorAnimation { duration: Tokens.animFast } }
+
+                MouseArea {
+                    id: sessionArea
+                    anchors.fill: parent
+                    anchors.margins: -6
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.nextSession()
+                }
+            }
+
             Row {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
@@ -369,7 +397,7 @@ ShellRoot {
             property: "opacity"
             to: 0
             duration: Tokens.animNormal
-            onFinished: Greetd.launch(Config.session, Config.environment)
+            onFinished: Greetd.launch(root.chosen.command, Config.environment)
         }
     }
 }
